@@ -1,0 +1,34 @@
+models:
+  anomaly_detector:
+    path: "models/anomaly_detector/model.xml"
+    device: "CPU"
+  classifier:
+    model_path: "models/classifier/model.onnx"
+    meta_path: "models/classifier/meta.json"
+
+pipeline:
+  thresholds:
+    low: 0.3
+    high: 0.7
+  lake_dir: "data/lake"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"
+  artifact_root: "mlruns"
+  experiment_name: "WeirdHazelnut_Integrated_Pipeline"
+  run_name: "Production_Inference_Session"
+  log_images: true
+
+label_studio:
+  url: "http://localhost:8080"
+  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzI3MzQ2NiwiaWF0IjoxNzgwMDczNDY2LCJqdGkiOiJlYjUyNTU2MDkwYmI0NDQ2YWZiYzFkMzJkZjQ5Y2M3YyIsInVzZXJfaWQiOiIxIn0.iJ-TgUEVYZoanjhE7JQ7JL9J6nuWivZ42hb52wtT8Ss"
+  project_id: 1
+
+registry:
+  enabled: false # Set to true to use models from MLflow registry
+  anomaly_detector: "models:/Hazelnut_Anomaly_Detector/Production"
+  classifier: "models:/Hazelnut_Classifier/Production"

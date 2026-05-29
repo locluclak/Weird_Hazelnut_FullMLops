@@ -1,0 +1,15 @@
+
+#15 [app] resolving provenance for metadata file
+#15 DONE 0.0s
+
+#16 [mlflow] resolving provenance for metadata file
+#16 DONE 0.0s
+[+] up 6/6
+ ✔ Image weirdhazelnut-app            Built                                                                                57.1s
+ ✔ Image weirdhazelnut-mlflow         Built                                                                                57.0s
+ ✔ Network weirdhazelnut_hazelnut-net Created                                                                              0.0s
+ ✔ Container label-studio-app         Started                                                                              0.7s
+ ✔ Container weird-hazelnut-mlflow    Started                                                                              0.6s
+ ✔ Container weird-hazelnut-app       Started                                                                              0.7s
+(adnut) PS D:\UIT\Year3\Semester2\MLops\project\model combination\WeirdHazelnut> docker compose exec app python labeling/init_project.py
+ERROR:__main__:Error initializing project: [Errno -2] Name or service not known

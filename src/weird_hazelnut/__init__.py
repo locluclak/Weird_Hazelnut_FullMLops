@@ -1,0 +1,2 @@
+"""WeirdHazelnut application package."""
+
