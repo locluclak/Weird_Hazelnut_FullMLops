@@ -19,6 +19,9 @@ numpy
 pillow
 opencv-python
 pyyaml
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+minio>=7.2.0
 scikit-learn>=1.2.0
 pandas>=2.0.0
 matplotlib>=3.7.0

@@ -8,6 +8,7 @@ import yaml
 from mlflow.tracking import MlflowClient
 
 from weird_hazelnut.config import load_config
+from weird_hazelnut.data import DatasetExporter, create_data_layer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -117,6 +118,13 @@ def register_latest_models(experiment_name):
 def main():
     config = load_config()
     data_root = "data/final"
+    data_layer = create_data_layer(config)
+    if data_layer:
+        data_root = str(
+            DatasetExporter(data_layer, output_dir=data_root).export_training_dataset(
+                description="Export generated before retraining."
+            )
+        )
 
     if not os.path.exists(data_root):
         logger.error("Data root %s does not exist. Run sync_data.py first.", data_root)
@@ -133,4 +141,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

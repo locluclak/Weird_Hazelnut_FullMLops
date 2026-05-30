@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from PIL import Image
 
 from weird_hazelnut.config import load_config
+from weird_hazelnut.data import create_data_layer
 from weird_hazelnut.integrations import LabelStudioClient
 from weird_hazelnut.integrations.mlflow_tracking import MlflowTracker
 from weird_hazelnut.integrations.mlflow_tracking import resolve_model_paths
@@ -15,6 +16,7 @@ from weird_hazelnut.pipeline import HazelnutPipeline
 class AppState:
     pipeline: HazelnutPipeline | None = None
     tracker: MlflowTracker | None = None
+    data_layer = None
 
 
 state = AppState()
@@ -28,6 +30,7 @@ def create_app() -> FastAPI:
         try:
             ad_model_path, cls_model_path, cls_meta_path = resolve_model_paths(config)
             ls_client = _create_label_studio_client(config)
+            state.data_layer = create_data_layer(config)
             state.pipeline = HazelnutPipeline(
                 anomaly_model_path=ad_model_path,
                 classifier_model_path=cls_model_path,
@@ -36,6 +39,7 @@ def create_app() -> FastAPI:
                 threshold_high=config["pipeline"]["thresholds"]["high"],
                 lake_dir=config["pipeline"]["lake_dir"],
                 ls_client=ls_client,
+                data_layer=state.data_layer,
                 anomaly_device=config["models"]["anomaly_detector"].get("device", "CPU"),
             )
             print("Pipeline initialized successfully.")
@@ -71,7 +75,16 @@ def create_app() -> FastAPI:
             image = Image.open(io.BytesIO(contents)).convert("RGB")
 
             start_time = time.perf_counter()
-            result = state.pipeline.run(image)
+            mlflow_run_id = None
+            if state.tracker and state.tracker.run:
+                mlflow_run_id = state.tracker.run.info.run_id
+            result = state.pipeline.run(
+                image,
+                image_bytes=contents,
+                filename=file.filename,
+                content_type=file.content_type,
+                mlflow_run_id=mlflow_run_id,
+            )
             total_latency = (time.perf_counter() - start_time) * 1000
             result["total_latency_ms"] = total_latency
 

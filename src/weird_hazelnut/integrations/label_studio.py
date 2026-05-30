@@ -23,7 +23,12 @@ class LabelStudioClient:
                 logger.error("Failed to initialize Label Studio client: %s", e)
                 self.client = None
 
-    def create_task(self, image_path: str, score: float) -> Optional[int]:
+    def create_task(
+        self,
+        image_path: str,
+        score: float,
+        metadata: dict | None = None,
+    ) -> Optional[int]:
         if not self.client:
             logger.warning("Label Studio client not configured. Skipping task creation.")
             return None
@@ -36,6 +41,7 @@ class LabelStudioClient:
                     "image": f"/data/local-files/?d={relative_path}",
                     "anomaly_score": score,
                     "source": "uncertain_pipeline_routing",
+                    **{k: v for k, v in (metadata or {}).items() if v is not None},
                 },
             )
             logger.info("Created Label Studio task: %s for image %s", task.id, image_path)

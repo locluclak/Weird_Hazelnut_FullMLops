@@ -16,6 +16,8 @@ services:
     environment:
       - CONFIG_PATH=config.docker.yaml
     depends_on:
+      - postgres
+      - minio
       - label-studio
     networks:
       - hazelnut-net
@@ -51,9 +53,42 @@ services:
       - hazelnut-net
     restart: always
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: weird-hazelnut-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=weird_hazelnut
+      - POSTGRES_USER=hazelnut
+      - POSTGRES_PASSWORD=hazelnut
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hazelnut-net
+    restart: always
+
+  minio:
+    image: minio/minio:latest
+    container_name: weird-hazelnut-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - hazelnut-net
+    restart: always
+
 networks:
   hazelnut-net:
     driver: bridge
 
 volumes:
   label_studio_data:
+  postgres_data:
+  minio_data:

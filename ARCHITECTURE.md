@@ -2,26 +2,29 @@
 
 ## Purpose
 WeirdHazelnut is a hazelnut quality-control MLOps project. It combines an
-OpenVINO anomaly detector with an ONNX classifier, routes production images into
-a local data lake, sends uncertain cases to Label Studio, and tracks inference,
-evaluation, and retraining with MLflow.
+OpenVINO anomaly detector with an ONNX classifier, stores production images in
+MinIO with metadata in Postgres, mirrors routed images into a local cache for
+Label Studio compatibility, sends uncertain cases to Label Studio, and tracks
+inference, evaluation, and retraining with MLflow.
 
 ## Runtime Flow
 ```mermaid
 flowchart TD
     A[Image upload] --> B[FastAPI /predict]
     B --> C[HazelnutPipeline]
-    C --> D[OpenVINO anomaly detector]
+    C --> S[MinIO object + Postgres image row]
+    S --> D[OpenVINO anomaly detector]
     D --> E{Anomaly score}
-    E -->|score < low| F[Save to data/lake/normal]
-    E -->|low <= score <= high| G[Save to data/lake/uncertain]
+    E -->|score < low| F[Record normal route]
+    E -->|low <= score <= high| G[Record uncertain route]
     G --> H[Create Label Studio task]
     E -->|score > high| I[ONNX classifier]
-    I --> J[Save to data/lake/anomalies]
+    I --> J[Record anomaly route]
     B --> K[MLflow metrics and artifacts]
     H --> L[Human labels]
     L --> M[sync_data.py]
-    M --> N[data/final/train]
+    M --> Q[Postgres annotations]
+    Q --> N[data/final/train export]
     N --> O[retrain.py]
     O --> P[MLflow model registry]
 ```
@@ -29,7 +32,13 @@ flowchart TD
 ## Main Components
 - API: `api.py` starts FastAPI through `src/weird_hazelnut/api/app.py`.
 - Pipeline: `src/weird_hazelnut/pipeline/core.py` coordinates inference, routing,
-  data-lake persistence, and optional Label Studio task creation.
+  data-layer persistence, local Label Studio mirroring, and optional Label Studio
+  task creation.
+- Data layer: `src/weird_hazelnut/data/database.py`,
+  `src/weird_hazelnut/data/models.py`, `src/weird_hazelnut/data/repositories.py`,
+  `src/weird_hazelnut/data/storage.py`, and `src/weird_hazelnut/data/exporter.py`
+  own Postgres schema bootstrap, metadata repositories, MinIO object operations,
+  and dataset export.
 - Inference: `src/weird_hazelnut/inference/anomaly_detector.py` wraps Anomalib
   OpenVINO inference, and `src/weird_hazelnut/inference/classifier.py` wraps ONNX
   Runtime classification.
@@ -37,7 +46,8 @@ flowchart TD
   setup/logging, and `src/weird_hazelnut/integrations/label_studio.py` owns Label
   Studio task creation.
 - Data sync: `src/weird_hazelnut/data/sync_worker.py` reads completed Label Studio
-  annotations and copies images into `data/final/train/<class>`.
+  annotations and stores canonical labels in Postgres. When the data layer is
+  disabled, it falls back to the old file-copy behavior.
 - Training: `src/weird_hazelnut/training/retrain.py` shells out to sibling
   training projects, then registers latest models in MLflow.
 
@@ -46,6 +56,8 @@ flowchart TD
 - Docker uses `config.docker.yaml` via `CONFIG_PATH=config.docker.yaml`.
 - Important keys are `models`, `pipeline.thresholds`, `pipeline.lake_dir`,
   `mlflow`, `label_studio`, and `registry`.
+- `data_layer.enabled` controls Postgres + MinIO integration. Docker enables it;
+  local development leaves it disabled by default.
 - Current configs contain Label Studio tokens. Treat them as local secrets and
   move them to environment variables before sharing the project.
 
@@ -68,7 +80,6 @@ Avoid these unless the task is explicitly about data, model artifacts, or MLflow
 - `__pycache__/`, `.vscode/`, `*.pyc`
 
 ## Known Technical Debt
-- The project is not currently a Git repository, so changes are harder to audit.
 - Root scripts used to contain application logic directly; they are now kept as
   thin compatibility entrypoints.
 - `retrain.py` depends on sibling folders `../HazelnutAnomalyDetection` and

@@ -12,6 +12,16 @@ pipeline:
     high: 0.7
   lake_dir: "data/lake"
 
+data_layer:
+  enabled: false
+  database_url: "postgresql+psycopg2://hazelnut:hazelnut@localhost:5432/weird_hazelnut"
+  object_storage:
+    endpoint: "localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "weird-hazelnut"
+    secure: false
+
 server:
   host: "0.0.0.0"
   port: 8000

@@ -5,6 +5,8 @@ WeirdHazelnut is a hazelnut quality-control MLOps demo. It combines:
 - OpenVINO anomaly detection
 - ONNX defect classification
 - FastAPI inference
+- MinIO image/object storage
+- Postgres metadata, labels, and dataset tracking
 - Label Studio human review for uncertain images
 - MLflow tracking and model registry
 
@@ -54,6 +56,9 @@ Services:
 - API: `http://localhost:8000`
 - Label Studio: `http://localhost:8080`
 - MLflow: `http://localhost:5000`
+- MinIO API: `http://localhost:9000`
+- MinIO console: `http://localhost:9001`
+- Postgres: `localhost:5432`
 
 Check containers:
 
@@ -112,7 +117,7 @@ curl http://localhost:8000/health
 Run prediction:
 
 ```bash
-curl.exe -X POST http://localhost:8000/predict -F "file=@data/hazelnut/test/crack/000.png"
+curl.exe -X POST http://localhost:8000/predict -F "file=@data/hazelnut/test/crack/good.png"
 ```
 
 Example response:
@@ -138,6 +143,11 @@ Routing behavior:
 - `0.3 <= score <= 0.7` saves to `data/lake/uncertain` and creates a Label Studio task.
 - `score > 0.7` runs the classifier and saves to `data/lake/anomalies`.
 
+When `data_layer.enabled` is true, the API also uploads each image to MinIO,
+deduplicates it by SHA256 in Postgres, records each inference run, and tracks
+Label Studio task IDs. The local `data/lake` copy remains as a compatibility
+mirror for Label Studio local-file serving.
+
 Thresholds are configured in `config.docker.yaml` for Docker and `config.yaml` for local runs.
 
 ## Human Labeling Loop
@@ -158,6 +168,10 @@ Synced images are copied into:
 ```text
 data/final/train/<class>/
 ```
+
+With the data layer enabled, sync writes completed labels into the `annotations`
+table first. `data/final/train/<class>` is then produced by the dataset exporter
+before retraining.
 
 ## Evaluate
 
@@ -186,6 +200,7 @@ docker compose exec app python retrain.py
 
 The script:
 
+- exports a versioned folder dataset from Postgres + MinIO into `data/final`
 - trains the anomaly detector using `data/final`
 - trains the classifier using `data/final`
 - registers latest successful models in MLflow
@@ -276,6 +291,17 @@ The compose file intentionally uses a named volume for `/label-studio/data`. Lab
 If imports fail locally, install dependencies from `requirements.txt`. The project depends on heavy ML packages including `mlflow`, `anomalib`, `onnxruntime`, `openvino`, and `label-studio-sdk`.
 
 If model loading fails, verify the files under `models/` exist and match the config paths.
+
+If the API fails during startup with a Postgres or MinIO connection error, check:
+
+```bash
+docker compose ps
+docker compose logs postgres
+docker compose logs minio
+```
+
+The app bootstraps the database schema and MinIO bucket on startup when
+`data_layer.enabled` is true.
 
 If uncertain images do not appear in Label Studio, check:
 

@@ -12,6 +12,16 @@ pipeline:
     high: 0.7
   lake_dir: "data/lake"
 
+data_layer:
+  enabled: true
+  database_url: "postgresql+psycopg2://hazelnut:hazelnut@postgres:5432/weird_hazelnut"
+  object_storage:
+    endpoint: "minio:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "weird-hazelnut"
+    secure: false
+
 server:
   host: "0.0.0.0"
   port: 8000
@@ -25,7 +35,7 @@ mlflow:
 
 label_studio:
   url: "http://label-studio:8080"
-  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzI3NTQ4NCwiaWF0IjoxNzgwMDc1NDg0LCJqdGkiOiJiYjQ2OWY0NmJiYWE0YjY3YTU2YzU3Y2JmMjBjMjAzOSIsInVzZXJfaWQiOiIxIn0.ZeVjrs67b9n3mInt0m-zJEwHLTlq36ripyEmh7LJZyA"
+  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzM0MDMwMywiaWF0IjoxNzgwMTQwMzAzLCJqdGkiOiJkNWM0ZTlhMjlkNjg0OWIyYTlhMWE0MzIxODAyOTVmMyIsInVzZXJfaWQiOiIxIn0.hrPU8jDnRLL0dJnk40581UNPZ2sBUZuc-5I9hKtw290"
   project_id: 1
 
 registry:
