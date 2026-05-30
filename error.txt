@@ -1,15 +1,59 @@
 
-#15 [app] resolving provenance for metadata file
-#15 DONE 0.0s
 
-#16 [mlflow] resolving provenance for metadata file
-#16 DONE 0.0s
-[+] up 6/6
- ✔ Image weirdhazelnut-app            Built                                                                                57.1s
- ✔ Image weirdhazelnut-mlflow         Built                                                                                57.0s
- ✔ Network weirdhazelnut_hazelnut-net Created                                                                              0.0s
- ✔ Container label-studio-app         Started                                                                              0.7s
- ✔ Container weird-hazelnut-mlflow    Started                                                                              0.6s
- ✔ Container weird-hazelnut-app       Started                                                                              0.7s
-(adnut) PS D:\UIT\Year3\Semester2\MLops\project\model combination\WeirdHazelnut> docker compose exec app python labeling/init_project.py
-ERROR:__main__:Error initializing project: [Errno -2] Name or service not known
+
+(adnut) PS D:\UIT\Year3\Semester2\MLops\project\model combination\WeirdHazelnut> docker compose exec app python sync_data.py
+Starting Data Sync from Label Studio...
+INFO:weird_hazelnut.data.layer:Data layer initialized with Postgres and MinIO.
+INFO:src.weird_hazelnut.data.sync_worker:Fetching tasks for project 1...
+INFO:httpx:HTTP Request: POST http://label-studio:8080/api/token/refresh/ "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://label-studio:8080/api/tasks/?fields=all&page=1&project=1 "HTTP/1.1 200 OK"
+ERROR:src.weird_hazelnut.data.sync_worker:Error during sync: 'dict' object has no attribute 'result'
+Sync process finished.
+
+
+(adnut) PS D:\UIT\Year3\Semester2\MLops\project\model combination\WeirdHazelnut> docker compose exec app python evaluate_pipeline.py
+INFO:weird_hazelnut.data.layer:Data layer initialized with Postgres and MinIO.
+2026/05/30 14:53:11 WARNING mlflow.utils.git_utils: Failed to import Git (the Git executable is probably not on your PATH), so Git SHA is not available. Error: Failed to initialize: Bad git executable.
+The git executable must be specified in one of the following ways:
+    - be included in your $PATH
+    - be set via $GIT_PYTHON_GIT_EXECUTABLE
+    - explicitly set via git.refresh(<full-path-to-g
+
+
+
+Testing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2 0:00:04 • 0:00:00 0.24it/s
+/usr/local/lib/python3.10/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1513: UserWarning: Provided key output for dynamic axes is not a valid input/output name
+  _validate_dynamic_axes(dynamic_axes, model, input_names, output_names)
+/usr/local/lib/python3.10/site-packages/anomalib/models/image/patchcore/torch_model.py:180: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if self.memory_bank.size(0) == 0:
+/usr/local/lib/python3.10/site-packages/anomalib/models/image/patchcore/torch_model.py:349: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if n <= chunk_size:
+/usr/local/lib/python3.10/site-packages/anomalib/models/image/patchcore/torch_model.py:435: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  n_neighbors=min(self.num_neighbors, memory_bank_effective_size),
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:333: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if not self._image_threshold.isnan():
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:319: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if preds is None or norm_min.isnan() or norm_max.isnan():
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:321: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if threshold.isnan():
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:346: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if not self._pixel_threshold.isnan():
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:357: TracerWarning: torch.tensor results are registered as constants in the trace. You can safely ignore this warning if you use this function to create tensors out of constant variables that would be the same every time you call this function. In any other case, this might cause the trace to be incorrect.
+  return torch.tensor(1.0) - self.image_sensitivity
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:297: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if preds is None or threshold.isnan():
+/usr/local/lib/python3.10/site-packages/anomalib/post_processing/post_processor.py:366: TracerWarning: torch.tensor results are registered as constants in the trace. You can safely ignore this warning if you use this function to create tensors out of constant variables that would be the same every time you call this function. In any other case, this might cause the trace to be incorrect.
+  return torch.tensor(1.0) - self.pixel_sensitivity
+/usr/local/lib/python3.10/site-packages/torch/onnx/_internal/torchscript_exporter/symbolic_opset11.py:954: UserWarning: Exporting aten::index operator of advanced indexing in opset 14 is achieved by combination of multiple ONNX operators, including Reshape, Transpose, Concat, and Gather. If indices include negative values, the exported graph will produce incorrect results.
+  return opset9.index(g, self, index)
+/usr/local/lib/python3.10/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/usr/local/lib/python3.10/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/usr/local/lib/python3.10/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+INFO:root:Exported model to models/anomaly_detector_retrained/weights/openvino/model.xml
+INFO:weird_hazelnut.training.anomaly:Anomaly detector retraining complete.
+INFO:src.weird_hazelnut.training.retrain:--- Retraining Classifier ---
+ERROR:weird_hazelnut.training.classifier:Classifier training needs non-empty train and validation/test samples.
+WARNING:src.weird_hazelnut.training.retrain:Retraining pipeline finished with errors. Skipping registration.
