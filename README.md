@@ -15,9 +15,9 @@ The normal startup path is Docker Compose.
 ## Project Layout
 
 - `api.py` - starts the FastAPI inference service.
-- `sync_data.py` - syncs completed Label Studio labels into `data/final/train`.
-- `retrain.py` - retrains/registers models through sibling training projects.
-- `evaluate_pipeline.py` - evaluates the pipeline on `data/hazelnut/test`.
+- `sync_data.py` - syncs completed Label Studio labels into Postgres.
+- `retrain.py` - retrains/registers models through integrated training code.
+- `evaluate_pipeline.py` - evaluates the pipeline from the MinIO/Postgres test split.
 - `src/weird_hazelnut/` - main application package.
 - `config.yaml` - local config.
 - `config.docker.yaml` - Docker config.
@@ -25,7 +25,7 @@ The normal startup path is Docker Compose.
 
 Large runtime folders:
 
-- `data/` - datasets and routed production images.
+- `data/` - seed datasets and manual test files only.
 - `models/` - required model artifacts.
 - `mlruns/`, `mlflow.db` - MLflow runtime state.
 - `openvino_cache/` - generated OpenVINO cache.
@@ -92,7 +92,9 @@ Then create the Label Studio project:
 docker compose exec app python labeling/init_project.py
 ```
 
-The init script updates `label_studio.project_id` in `config.docker.yaml` and ensures the project has a Local Files source storage at `/label-studio/files/lake`. Restart the API container one more time after project creation:
+The init script updates `label_studio.project_id` in `config.docker.yaml`.
+Tasks use MinIO presigned URLs; Label Studio local file storage is not configured.
+Restart the API container one more time after project creation:
 
 ```bash
 docker compose restart app
@@ -106,6 +108,17 @@ Login:
 
 Docker uses `config.docker.yaml`, not `config.yaml`. The compose file mounts `config.docker.yaml` into the app container, so you do not need to rebuild after editing the API key, but the running API process still needs a restart to reload it.
 
+## Initialize The Data Lake
+
+On first setup, seed MinIO and Postgres from the local `data/hazelnut` folder:
+
+```bash
+docker compose exec app python scripts/migrate_dataset_to_datalake.py --dataset-root data/hazelnut --dataset-name initial_hazelnut
+```
+
+After migration, MinIO/Postgres is the dataset source of truth. Keep `/data` for
+initial seeding and manual API tests only.
+
 ## Test The API
 
 Health check:
@@ -117,7 +130,7 @@ curl http://localhost:8000/health
 Run prediction:
 
 ```bash
-curl.exe -X POST http://localhost:8000/predict -F "file=@data/hazelnut/test/crack/good.png"
+curl.exe -X POST http://localhost:8000/predict -F "file=@data/hazelnut/test/good/000.png"
 ```
 
 Example response:
@@ -139,14 +152,14 @@ Example response:
 
 Routing behavior:
 
-- `score < 0.3` saves to `data/lake/normal`.
-- `0.3 <= score <= 0.7` saves to `data/lake/uncertain` and creates a Label Studio task.
-- `score > 0.7` runs the classifier and saves to `data/lake/anomalies`.
+- `score < 0.3` records the image as `normal`.
+- `0.3 <= score <= 0.7` records the image as `uncertain` and creates a Label Studio task.
+- `score > 0.7` runs the classifier and records the image as `anomalies`.
 
-When `data_layer.enabled` is true, the API also uploads each image to MinIO,
+When `data_layer.enabled` is true, the API uploads each image to MinIO,
 deduplicates it by SHA256 in Postgres, records each inference run, and tracks
-Label Studio task IDs. The local `data/lake` copy remains as a compatibility
-mirror for Label Studio local-file serving.
+Label Studio task IDs. Label Studio receives MinIO presigned URLs and does not
+need a local copy under `data/lake`.
 
 Thresholds are configured in `config.docker.yaml` for Docker and `config.yaml` for local runs.
 
@@ -163,19 +176,12 @@ Sync completed labels:
 docker compose exec app python sync_data.py
 ```
 
-Synced images are copied into:
-
-```text
-data/final/train/<class>/
-```
-
 With the data layer enabled, sync writes completed labels into the `annotations`
-table first. `data/final/train/<class>` is then produced by the dataset exporter
-before retraining.
+table. It does not copy images into `data/final`.
 
 ## Evaluate
 
-Run evaluation against `data/hazelnut/test`:
+Run evaluation against the MinIO/Postgres `test` split:
 
 ```bash
 docker compose exec app python evaluate_pipeline.py
@@ -185,25 +191,29 @@ Results are logged to MLflow.
 
 ## Retrain
 
-Retraining expects sibling projects next to this repository:
-
-```text
-../HazelnutAnomalyDetection
-../HazelnutClassifier
-```
-
 Run:
 
 ```bash
 docker compose exec app python retrain.py
 ```
 
-The script:
+Retraining is now self-contained in `src/weird_hazelnut/training/` and no longer
+requires `HazelnutAnomalyDetection` or `HazelnutClassifier` beside this repo.
+The classifier trainer streams samples from MinIO/Postgres. The anomaly trainer
+also reads the canonical dataset from MinIO/Postgres, then uses a temporary
+system directory as an Anomalib `Folder` bridge because Anomalib's training API
+is path-based; it does not write training data into `/data` or `data/final`.
 
-- exports a versioned folder dataset from Postgres + MinIO into `data/final`
-- trains the anomaly detector using `data/final`
-- trains the classifier using `data/final`
-- registers latest successful models in MLflow
+Training parameters live under `training` in `config.yaml` and
+`config.docker.yaml`. Both training runs log parameters, dataset counts,
+metrics, and production artifacts to MLflow. If `registry.enabled` is true,
+`retrain.py` registers the latest `Retraining_AD_*` and
+`Retraining_Classifier_*` runs as `Hazelnut_Anomaly_Detector` and
+`Hazelnut_Classifier`.
+
+The initial MVTec-style seed usually has only `train/good`, which is enough for
+anomaly retraining. Classifier retraining requires defect-labeled training items
+such as `crack`, `cut`, `hole`, and `print` in Postgres.
 
 ## Local Development
 
@@ -307,18 +317,18 @@ If uncertain images do not appear in Label Studio, check:
 
 - `label_studio.project_id` in the active config
 - `label_studio.api_key`
-- local file serving environment variables in `docker-compose.yml`
-- that `data/lake` is mounted into the Label Studio container
+- `data_layer.object_storage.public_endpoint` points to a browser-reachable MinIO endpoint
+- MinIO is reachable at `http://localhost:9000`
 
-If a task opens but the image fails with `There was an issue loading URL from $image value`, verify the task image URL uses this shape:
+If a task opens but the image fails with `There was an issue loading URL from $image value`, verify the task image URL is a MinIO presigned URL using the configured public endpoint, for example:
 
 ```text
-/data/local-files/?d=lake/uncertain/<filename>.png
+http://localhost:9000/weird-hazelnut/raw/...
 ```
 
-The Label Studio container mounts `./data/lake` to `/label-studio/files/lake`, and `LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT` is `/label-studio/files`. Tasks created before this URL fix can still contain the old `ls-local-files://...` value; delete or recreate those tasks after restarting Label Studio and the app.
+Tasks created before the MinIO URL change can still contain old local-file URLs; delete or recreate those tasks after restarting Label Studio and the app.
 
-Also verify the project has Local Files source storage configured. The init script does this automatically:
+The init script is safe to rerun:
 
 ```bash
 docker compose exec app python labeling/init_project.py

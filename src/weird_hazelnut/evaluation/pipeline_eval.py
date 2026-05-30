@@ -7,11 +7,13 @@ from PIL import Image
 from tqdm import tqdm
 
 from weird_hazelnut.config import load_config
+from weird_hazelnut.data import create_data_layer
 from weird_hazelnut.pipeline import HazelnutPipeline
 
 
 def evaluate():
-    config = load_config("config.yaml")
+    config = load_config()
+    data_layer = create_data_layer(config)
     pipeline = HazelnutPipeline(
         anomaly_model_path=config["models"]["anomaly_detector"]["path"],
         classifier_model_path=config["models"]["classifier"]["model_path"],
@@ -20,12 +22,8 @@ def evaluate():
         threshold_high=config["pipeline"]["thresholds"]["high"],
         lake_dir=config["pipeline"]["lake_dir"],
         anomaly_device=config["models"]["anomaly_detector"].get("device", "CPU"),
+        data_layer=data_layer,
     )
-
-    test_dir = Path("data/hazelnut/test")
-    if not test_dir.exists():
-        print(f"Test directory not found at {test_dir}")
-        return
 
     mlflow_cfg = config.get("mlflow", {})
     mlflow.set_tracking_uri(mlflow_cfg.get("tracking_uri", "sqlite:///mlflow.db"))
@@ -47,26 +45,23 @@ def evaluate():
         latencies = []
 
         print("Starting evaluation...")
-        for class_dir in tqdm(list(test_dir.iterdir())):
-            if not class_dir.is_dir():
-                continue
-
-            true_label = class_dir.name
+        for image, true_label in tqdm(_iter_test_images(data_layer)):
             is_truly_anomalous = true_label != "good"
 
-            for img_path in class_dir.glob("*.png"):
-                image = Image.open(img_path).convert("RGB")
+            start_time = time.perf_counter()
+            res = pipeline.run(image, persist=False)
+            latency = (time.perf_counter() - start_time) * 1000
 
-                start_time = time.perf_counter()
-                res = pipeline.run(image)
-                latency = (time.perf_counter() - start_time) * 1000
+            res["true_label"] = true_label
+            res["is_truly_anomalous"] = is_truly_anomalous
+            res["latency"] = latency
 
-                res["true_label"] = true_label
-                res["is_truly_anomalous"] = is_truly_anomalous
-                res["latency"] = latency
+            results.append(res)
+            latencies.append(latency)
 
-                results.append(res)
-                latencies.append(latency)
+        if not results:
+            print("No test samples found. Run scripts/migrate_dataset_to_datalake.py first.")
+            return
 
         total = len(results)
         ad_accuracy = sum(
@@ -106,7 +101,23 @@ def evaluate():
         experiment = mlflow.get_experiment(run.info.experiment_id)
         print(f"\nSuccessfully logged evaluation to MLflow experiment: {experiment.name}")
 
+def _iter_test_images(data_layer):
+    if data_layer:
+        for item, image_record in data_layer.list_dataset_images(split="test"):
+            yield data_layer.open_image(image_record.minio_object_key), item.label
+        return
+
+    test_dir = Path("data/hazelnut/test")
+    if not test_dir.exists():
+        print(f"Test directory not found at {test_dir}")
+        return
+
+    for class_dir in test_dir.iterdir():
+        if not class_dir.is_dir():
+            continue
+        for img_path in class_dir.glob("*.png"):
+            yield Image.open(img_path).convert("RGB"), class_dir.name
+
 
 if __name__ == "__main__":
     evaluate()
-

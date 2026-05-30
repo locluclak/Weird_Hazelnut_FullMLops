@@ -7,7 +7,7 @@ from src.weird_hazelnut.config import load_config
 from src.weird_hazelnut.data.database import Database
 from src.weird_hazelnut.data.repositories import DataRepository
 from src.weird_hazelnut.data.sync_worker import DataSyncWorker
-from src.weird_hazelnut.integrations.label_studio import _to_label_studio_path
+from src.weird_hazelnut.integrations.label_studio import local_file_url
 
 
 class LightweightBehaviorTests(unittest.TestCase):
@@ -20,20 +20,11 @@ class LightweightBehaviorTests(unittest.TestCase):
 
         self.assertEqual(config["pipeline"]["thresholds"]["low"], 0.1)
 
-    def test_label_studio_path_maps_data_lake_to_local_file_uri(self):
+    def test_local_label_studio_url_matches_document_root(self):
         image_path = "D:/repo/WeirdHazelnut/data/lake/uncertain/sample.png"
 
         self.assertEqual(
-            _to_label_studio_path(image_path),
-            "lake/uncertain/sample.png",
-        )
-
-    def test_label_studio_local_file_url_matches_document_root(self):
-        image_path = "D:/repo/WeirdHazelnut/data/lake/uncertain/sample.png"
-        relative_path = _to_label_studio_path(image_path)
-
-        self.assertEqual(
-            f"/data/local-files/?d={relative_path}",
+            local_file_url(image_path),
             "/data/local-files/?d=lake/uncertain/sample.png",
         )
 

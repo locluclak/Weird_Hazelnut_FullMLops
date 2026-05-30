@@ -2,10 +2,10 @@
 
 ## Purpose
 WeirdHazelnut is a hazelnut quality-control MLOps project. It combines an
-OpenVINO anomaly detector with an ONNX classifier, stores production images in
-MinIO with metadata in Postgres, mirrors routed images into a local cache for
-Label Studio compatibility, sends uncertain cases to Label Studio, and tracks
-inference, evaluation, and retraining with MLflow.
+OpenVINO anomaly detector with an ONNX classifier, stores production and seed
+dataset images in MinIO with metadata in Postgres, sends uncertain cases to
+Label Studio through MinIO presigned URLs, and tracks inference, evaluation, and
+retraining with MLflow.
 
 ## Runtime Flow
 ```mermaid
@@ -24,16 +24,15 @@ flowchart TD
     H --> L[Human labels]
     L --> M[sync_data.py]
     M --> Q[Postgres annotations]
-    Q --> N[data/final/train export]
-    N --> O[retrain.py]
+    Q --> N[Postgres dataset items + MinIO objects]
+    N --> O[training/evaluation readers]
     O --> P[MLflow model registry]
 ```
 
 ## Main Components
 - API: `api.py` starts FastAPI through `src/weird_hazelnut/api/app.py`.
 - Pipeline: `src/weird_hazelnut/pipeline/core.py` coordinates inference, routing,
-  data-layer persistence, local Label Studio mirroring, and optional Label Studio
-  task creation.
+  data-layer persistence, and optional Label Studio task creation.
 - Data layer: `src/weird_hazelnut/data/database.py`,
   `src/weird_hazelnut/data/models.py`, `src/weird_hazelnut/data/repositories.py`,
   `src/weird_hazelnut/data/storage.py`, and `src/weird_hazelnut/data/exporter.py`
@@ -48,14 +47,22 @@ flowchart TD
 - Data sync: `src/weird_hazelnut/data/sync_worker.py` reads completed Label Studio
   annotations and stores canonical labels in Postgres. When the data layer is
   disabled, it falls back to the old file-copy behavior.
-- Training: `src/weird_hazelnut/training/retrain.py` shells out to sibling
-  training projects, then registers latest models in MLflow.
+- Dataset migration: `scripts/migrate_dataset_to_datalake.py` seeds MinIO and
+  Postgres from `data/hazelnut` during first data-lake initialization.
+- Training: `src/weird_hazelnut/training/retrain.py`,
+  `src/weird_hazelnut/training/anomaly.py`, and
+  `src/weird_hazelnut/training/classifier.py` own self-contained retraining.
+  They read canonical dataset metadata from Postgres and image bytes from MinIO,
+  log progress to MLflow, and no longer depend on sibling repositories. The
+  anomaly trainer uses an ephemeral system temp directory as an Anomalib `Folder`
+  bridge because Anomalib's trainer is path-based; `/data` and `data/final` are
+  not used for retraining.
 
 ## Configuration
 - Local development uses `config.yaml`.
 - Docker uses `config.docker.yaml` via `CONFIG_PATH=config.docker.yaml`.
 - Important keys are `models`, `pipeline.thresholds`, `pipeline.lake_dir`,
-  `mlflow`, `label_studio`, and `registry`.
+  `mlflow`, `training`, `label_studio`, and `registry`.
 - `data_layer.enabled` controls Postgres + MinIO integration. Docker enables it;
   local development leaves it disabled by default.
 - Current configs contain Label Studio tokens. Treat them as local secrets and
@@ -71,7 +78,7 @@ Inspect these first:
 - Docker files: `Dockerfile`, `docker-compose.yml`
 
 Avoid these unless the task is explicitly about data, model artifacts, or MLflow:
-- `data/` - image datasets and data lake
+- `data/` - seed/manual-test datasets only; not the canonical data lake
 - `models/` - binary model artifacts
 - `mlruns/` and `mlflow.db` - MLflow runtime state
 - `openvino_cache/` - generated OpenVINO cache
@@ -82,11 +89,9 @@ Avoid these unless the task is explicitly about data, model artifacts, or MLflow
 ## Known Technical Debt
 - Root scripts used to contain application logic directly; they are now kept as
   thin compatibility entrypoints.
-- `retrain.py` depends on sibling folders `../HazelnutAnomalyDetection` and
-  `../HazelnutClassifier`; those paths should become config values before this
-  is used in production.
 - Label Studio setup is duplicated between top-level `docker-compose.yml` and
   `labeling/setup_docker.py`; prefer the top-level compose file for full-system
   runs.
-- The Label Studio task path mapping assumes `data/lake` is mounted at
-  `/label-studio/files/lake`.
+- Anomalib still requires a folder-shaped dataset at train time. The integrated
+  trainer creates that shape in a temporary directory and removes it after the
+  run.

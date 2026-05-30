@@ -7,7 +7,7 @@ from PIL import Image
 
 from weird_hazelnut.data.layer import DataLayer
 from weird_hazelnut.inference import AnomalyDetector, HazelnutClassifier
-from weird_hazelnut.integrations.label_studio import LabelStudioClient
+from weird_hazelnut.integrations.label_studio import LabelStudioClient, local_file_url
 
 
 class HazelnutPipeline:
@@ -31,8 +31,9 @@ class HazelnutPipeline:
         self.ls_client = ls_client
         self.data_layer = data_layer
 
-        for d in ["normal", "uncertain", "anomalies"]:
-            os.makedirs(os.path.join(self.lake_dir, d), exist_ok=True)
+        if not self.data_layer:
+            for d in ["normal", "uncertain", "anomalies"]:
+                os.makedirs(os.path.join(self.lake_dir, d), exist_ok=True)
 
     def run(
         self,
@@ -41,10 +42,11 @@ class HazelnutPipeline:
         filename: str | None = None,
         content_type: str | None = None,
         mlflow_run_id: str | None = None,
+        persist: bool = True,
     ) -> dict:
         start_time = time.perf_counter()
         image_record = None
-        if self.data_layer:
+        if self.data_layer and persist:
             image_record = self.data_layer.persist_image(
                 image=image,
                 image_bytes=image_bytes,
@@ -81,11 +83,21 @@ class HazelnutPipeline:
         if self.data_layer and image_record:
             self.data_layer.update_image_stage(image_record.id, category)
 
-        save_path = self.save_image(image, category, score, result["label"])
+        save_path = None
+        if not self.data_layer:
+            save_path = self.save_image(image, category, score, result["label"])
 
-        if category == "uncertain" and self.ls_client:
+        if category == "uncertain" and self.ls_client and (image_record or not self.data_layer):
+            image_url = None
+            if self.data_layer and image_record:
+                image_url = self.data_layer.presigned_image_url(
+                    image_record.minio_object_key,
+                )
+            else:
+                image_url = local_file_url(os.path.abspath(save_path))
+
             result["ls_task_id"] = self.ls_client.create_task(
-                os.path.abspath(save_path),
+                image_url,
                 score,
                 metadata={
                     "image_id": image_record.id if image_record else None,

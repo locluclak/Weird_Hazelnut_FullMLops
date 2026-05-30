@@ -25,7 +25,7 @@ class LabelStudioClient:
 
     def create_task(
         self,
-        image_path: str,
+        image_url: str,
         score: float,
         metadata: dict | None = None,
     ) -> Optional[int]:
@@ -34,26 +34,43 @@ class LabelStudioClient:
             return None
 
         try:
-            relative_path = _to_label_studio_path(image_path)
             task = self.client.tasks.create(
                 project=self.project_id,
                 data={
-                    "image": f"/data/local-files/?d={relative_path}",
+                    "image": image_url,
                     "anomaly_score": score,
                     "source": "uncertain_pipeline_routing",
                     **{k: v for k, v in (metadata or {}).items() if v is not None},
                 },
             )
-            logger.info("Created Label Studio task: %s for image %s", task.id, image_path)
+            logger.info("Created Label Studio task: %s for image %s", task.id, image_url)
             return task.id
         except Exception as e:
             logger.error("Error creating Label Studio task: %s", e)
             return None
 
+    def update_task_image(self, task_id: int, image_url: str) -> bool:
+        if not self.client:
+            logger.warning("Label Studio client not configured. Skipping task update.")
+            return False
 
-def _to_label_studio_path(image_path: str) -> str:
+        try:
+            task = self.client.tasks.get(str(task_id))
+            data = dict(task.data or {})
+            data["image"] = image_url
+            self.client.tasks.update(str(task_id), data=data)
+            logger.info("Updated Label Studio task %s image URL.", task_id)
+            return True
+        except Exception as e:
+            logger.error("Error updating Label Studio task %s: %s", task_id, e)
+            return False
+
+
+def local_file_url(image_path: str) -> str:
     normalized = image_path.replace("\\", "/")
     parts = normalized.split("/data/lake/")
     if len(parts) > 1:
-        return "lake/" + parts[1]
-    return os.path.basename(image_path)
+        relative_path = "lake/" + parts[1]
+    else:
+        relative_path = os.path.basename(image_path)
+    return f"/data/local-files/?d={relative_path}"

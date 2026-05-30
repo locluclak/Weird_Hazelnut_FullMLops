@@ -1,0 +1,50 @@
+# config/default.yaml
+
+# ==============================================================================
+# Data Configuration
+# ==============================================================================
+data:
+  root: "./data/final"
+  img_size: 224
+  fast_cpu: false
+  augment_level: "medium"  # options: light, medium, heavy
+  val_split: 0.1
+  test_split: 0.2
+
+# ==============================================================================
+# Model Configuration
+# ==============================================================================
+model:
+  name: "mobilenet_v3_large"
+  weights: "IMAGENET1K_V1"
+  dropout: 0.3
+
+# ==============================================================================
+# Training and Engine Configuration
+# ==============================================================================
+train:
+  epochs: 30
+  batch_size: 32
+  lr: 0.001
+  weight_decay: 0.0001
+  label_smooth: 0.1
+  mixup_alpha: 0.2
+  early_stop: 5
+
+# ==============================================================================
+# MLflow Tracking & Serving
+# ==============================================================================
+mlflow:
+  tracking_uri: "http://127.0.0.1:5000"
+  experiment_name: "Hazelnut_Defect_Classification"
+  run_name: "MobileNetV3_Training_Run"
+  api_experiment_name: "hazelnut_classifier_production_api"
+  log_images: true
+  log_models: true
+
+# ==============================================================================
+# Export Options
+# ==============================================================================
+export:
+  onnx_name: "hazelnut_classifier.onnx"
+  openvino_dir: "output/openvino"

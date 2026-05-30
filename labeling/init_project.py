@@ -34,8 +34,6 @@ print(f"\nAPI Key: {API_KEY}")
 logger.info(f"Connecting to Label Studio at: {LABEL_STUDIO_URL}")
 
 PROJECT_TITLE = "WeirdHazelnut Quality Audit"
-LOCAL_STORAGE_TITLE = "WeirdHazelnut Lake Images"
-LOCAL_STORAGE_PATH = "/label-studio/files/lake"
 _ACCESS_TOKEN = None
 
 LABEL_CONFIG = """
@@ -132,34 +130,6 @@ def ls_api(method, path, payload=None, query=None):
         body = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"{method} {url} failed with {e.code}: {body}") from e
 
-def ensure_local_file_storage(project_id):
-    storages = ls_api("GET", "/api/storages/localfiles/", query={"project": project_id}) or []
-    for storage in storages:
-        if storage.get("path") == LOCAL_STORAGE_PATH:
-            logger.info(
-                "Local file storage already configured for project %s: %s",
-                project_id,
-                LOCAL_STORAGE_PATH,
-            )
-            return storage
-
-    payload = {
-        "project": project_id,
-        "title": LOCAL_STORAGE_TITLE,
-        "description": "Serves routed hazelnut images from data/lake.",
-        "path": LOCAL_STORAGE_PATH,
-        "recursive_scan": True,
-        "regex_filter": ".*\\.(png|jpg|jpeg)$",
-        "use_blob_urls": False,
-    }
-    storage = ls_api("POST", "/api/storages/localfiles/", payload=payload)
-    logger.info(
-        "Created local file storage for project %s at %s",
-        project_id,
-        LOCAL_STORAGE_PATH,
-    )
-    return storage
-
 def project_exists(project_id):
     try:
         ls_api("GET", f"/api/projects/{project_id}")
@@ -199,7 +169,7 @@ def initialize_project():
             logger.info(f"Successfully created project ID: {project_id}")
             update_config_project_id(project_id)
 
-        ensure_local_file_storage(project_id)
+        logger.info("Project uses MinIO presigned image URLs; no local file storage is configured.")
         logger.info(f"Access it at: {LABEL_STUDIO_URL}/projects/{project_id}")
         
     except Exception as e:

@@ -21,6 +21,9 @@ data_layer:
     secret_key: "minioadmin"
     bucket: "weird-hazelnut"
     secure: false
+    region: "us-east-1"
+    public_endpoint: "localhost:9000"
+    public_secure: false
 
 server:
   host: "0.0.0.0"
@@ -33,9 +36,42 @@ mlflow:
   run_name: "Production_Inference_Session"
   log_images: true
 
+training:
+  anomaly_detector:
+    enabled: true
+    run_name: "Retraining_AD_MinIO"
+    model_name: "patchcore"
+    backbone: "resnet18"
+    coreset_sampling_ratio: 0.005
+    num_neighbors: 9
+    image_size: [256, 256]
+    train_batch_size: 32
+    test_batch_size: 32
+    max_epochs: 3
+    accelerator: "cpu"
+    devices: 0
+    export_type: "OPENVINO"
+    export_root: "models/anomaly_detector_retrained"
+  classifier:
+    enabled: true
+    run_name: "Retraining_Classifier_MinIO"
+    output_dir: "models/classifier_retrained"
+    onnx_name: "model.onnx"
+    meta_name: "meta.json"
+    img_size: 224
+    epochs: 5
+    batch_size: 32
+    lr: 0.001
+    weight_decay: 0.0001
+    label_smooth: 0.1
+    early_stop: 5
+    augment_level: "medium"
+    include_good: false
+    pretrained: false
+
 label_studio:
   url: "http://label-studio:8080"
-  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzM0MDMwMywiaWF0IjoxNzgwMTQwMzAzLCJqdGkiOiJkNWM0ZTlhMjlkNjg0OWIyYTlhMWE0MzIxODAyOTVmMyIsInVzZXJfaWQiOiIxIn0.hrPU8jDnRLL0dJnk40581UNPZ2sBUZuc-5I9hKtw290"
+  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzM1MTEzMiwiaWF0IjoxNzgwMTUxMTMyLCJqdGkiOiI4ZDE4MWMzNGUzNjc0Nzc4ODJiZDU2MjEzZDMxOWI3ZCIsInVzZXJfaWQiOiIxIn0.PIIMuJlEwf6-iJqDv3PwSetH233ss95W3HjhWia55C4"
   project_id: 1
 
 registry:
