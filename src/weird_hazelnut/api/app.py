@@ -53,6 +53,20 @@ def create_app() -> FastAPI:
                 print("MLflow run ended.")
 
     app = FastAPI(title="WeirdHazelnut Combined API", lifespan=lifespan)
+    
+    from fastapi.staticfiles import StaticFiles
+    import os
+    os.makedirs("data/lake", exist_ok=True)
+    app.mount("/static", StaticFiles(directory="data/lake"), name="static")
+
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health")
     async def health():
