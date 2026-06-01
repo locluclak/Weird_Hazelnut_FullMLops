@@ -161,8 +161,18 @@ def train_classifier(config: dict, data_layer: DataLayer) -> bool:
     all_samples = load_samples(data_layer)
     labels = sorted({sample.label for sample in all_samples if include_good or sample.label != "good"})
     train_samples = [s for s in all_samples if s.split == "train" and s.label in labels]
-    val_split = "val" if any(s.split == "val" and s.label in labels for s in all_samples) else "test"
-    val_samples = [s for s in all_samples if s.split == val_split and s.label in labels]
+    # val_split = "val" if any(s.split == "val" and s.label in labels for s in all_samples) else "test"
+    # val_samples = [s for s in all_samples if s.split == val_split and s.label in labels]
+
+    val_samples = [s for s in all_samples if s.split == "val" and s.label in labels]
+
+    if not val_samples:
+        logger.error(
+            "Classifier retraining requires validation samples in split='val'. "
+            "Run Label Studio sync with human_feedback_split_strategy enabled."
+        )
+        return False
+    
     if not train_samples or not val_samples:
         logger.error("Classifier training needs non-empty train and validation/test samples.")
         return False

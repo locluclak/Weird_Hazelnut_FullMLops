@@ -78,3 +78,14 @@ registry:
   enabled: false # Set to true to use models from MLflow registry
   anomaly_detector: "models:/Hazelnut_Anomaly_Detector/Production"
   classifier: "models:/Hazelnut_Classifier/Production"
+
+data_sync:
+  promote_annotations_to_dataset: true
+  human_feedback_dataset_name: human_feedback_dataset
+  human_feedback_split: train
+
+  human_feedback_split_strategy:
+    enabled: true
+    train_ratio: 0.8
+    val_ratio: 0.2
+    method: hash_by_label_and_image_id

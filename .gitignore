@@ -20,3 +20,17 @@ label_studio_docker/myfiles/
 
 temp_ad_config.yaml
 *.log
+
+# Airflow runtime
+airflow/logs/
+airflow/*.pid
+airflow/airflow.cfg
+airflow/webserver_config.py
+
+# Experiment outputs
+results/
+mlruns/
+artifacts/
+
+# Embedded repo
+related_repo/
