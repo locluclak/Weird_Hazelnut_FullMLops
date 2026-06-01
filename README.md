@@ -54,11 +54,11 @@ docker compose up -d --build
 Services:
 
 - API: `http://localhost:8000`
-- Label Studio: `http://localhost:8080`
+- Label Studio: `http://localhost:8080` (Username: `admin@example.com` | Password: `admin123456`)
 - MLflow: `http://localhost:5000`
 - MinIO API: `http://localhost:9000`
-- MinIO console: `http://localhost:9001`
-- Postgres: `localhost:5432`
+- MinIO console: `http://localhost:9001` (Username: `minioadmin` | Password: `minioadmin`)
+- Postgres: `localhost:5432` (Username: `hazelnut` | Password: `hazelnut` | Database: `weird_hazelnut`)
 
 Check containers:
 
