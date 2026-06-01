@@ -8,7 +8,7 @@ venv/
 env/
 .venv/
 
-data/
+/data/
 models/
 mlruns/
 mlflow.db

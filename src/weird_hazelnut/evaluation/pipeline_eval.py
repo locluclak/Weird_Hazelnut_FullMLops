@@ -11,13 +11,29 @@ from weird_hazelnut.data import create_data_layer
 from weird_hazelnut.pipeline import HazelnutPipeline
 
 
-def evaluate():
-    config = load_config()
+def evaluate(config: dict | None = None, model_overrides: dict | None = None, run_name: str = "Full_Test_Set_Evaluation"):
+    config = config or load_config()
     data_layer = create_data_layer(config)
+
+    model_overrides = model_overrides or {}
+
+    ad_model_path = model_overrides.get(
+        "anomaly_model_path",
+        config["models"]["anomaly_detector"]["path"],
+    )
+    cls_model_path = model_overrides.get(
+        "classifier_model_path",
+        config["models"]["classifier"]["model_path"],
+    )
+    cls_meta_path = model_overrides.get(
+        "classifier_meta_path",
+        config["models"]["classifier"]["meta_path"],
+    )
+
     pipeline = HazelnutPipeline(
-        anomaly_model_path=config["models"]["anomaly_detector"]["path"],
-        classifier_model_path=config["models"]["classifier"]["model_path"],
-        classifier_meta_path=config["models"]["classifier"]["meta_path"],
+        anomaly_model_path=ad_model_path,
+        classifier_model_path=cls_model_path,
+        classifier_meta_path=cls_meta_path,
         threshold_low=config["pipeline"]["thresholds"]["low"],
         threshold_high=config["pipeline"]["thresholds"]["high"],
         lake_dir=config["pipeline"]["lake_dir"],
@@ -31,11 +47,12 @@ def evaluate():
         mlflow_cfg.get("experiment_name", "WeirdHazelnut_Integrated_Pipeline")
     )
 
-    with mlflow.start_run(run_name="Full_Test_Set_Evaluation") as run:
+    with mlflow.start_run(run_name=run_name) as run:
         mlflow.log_params(
             {
-                "ad_model": config["models"]["anomaly_detector"]["path"],
-                "cls_model": config["models"]["classifier"]["model_path"],
+                "ad_model": ad_model_path,
+                "cls_model": cls_model_path,
+                "cls_meta": cls_meta_path,
                 "threshold_low": config["pipeline"]["thresholds"]["low"],
                 "threshold_high": config["pipeline"]["thresholds"]["high"],
             }
@@ -100,6 +117,8 @@ def evaluate():
 
         experiment = mlflow.get_experiment(run.info.experiment_id)
         print(f"\nSuccessfully logged evaluation to MLflow experiment: {experiment.name}")
+
+        return metrics
 
 def _iter_test_images(data_layer):
     if data_layer:
