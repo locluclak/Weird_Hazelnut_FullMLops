@@ -77,6 +77,9 @@ class DataRepository:
                 )
             )
             if existing:
+                existing.quality_label = values.get("quality_label", existing.quality_label)
+                existing.is_anomaly = values.get("is_anomaly", existing.is_anomaly)
+                existing.raw_annotation = values.get("raw_annotation", existing.raw_annotation)
                 return existing
 
         annotation = Annotation(**values)
