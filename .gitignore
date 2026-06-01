@@ -9,10 +9,11 @@ env/
 .venv/
 
 /data/
-models/
 mlruns/
-mlflow.db
+mlflow_data/
 openvino_cache/
+models/anomaly_detector_retrained
+models/classifier_retrained
 
 labeling/label_studio_docker/mydata/
 label_studio_docker/mydata/
@@ -22,10 +23,7 @@ temp_ad_config.yaml
 *.log
 
 # Airflow runtime
-airflow/logs/
-airflow/*.pid
-airflow/airflow.cfg
-airflow/webserver_config.py
+airflow/
 
 # Experiment outputs
 results/

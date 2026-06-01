@@ -59,19 +59,22 @@ training:
     onnx_name: "model.onnx"
     meta_name: "meta.json"
     img_size: 224
-    epochs: 5
+    epochs: 50
     batch_size: 32
     lr: 0.001
     weight_decay: 0.0001
     label_smooth: 0.1
-    early_stop: 5
+    early_stop: 10
     augment_level: "medium"
     include_good: false
-    pretrained: false
+    pretrained: true
+    dataset_dir: "data/classifier_dataset"
+    split_ratio: 0.8
+    train_priority_threshold: 10
 
 label_studio:
   url: "http://localhost:8080"
-  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzI3MzQ2NiwiaWF0IjoxNzgwMDczNDY2LCJqdGkiOiJlYjUyNTU2MDkwYmI0NDQ2YWZiYzFkMzJkZjQ5Y2M3YyIsInVzZXJfaWQiOiIxIn0.iJ-TgUEVYZoanjhE7JQ7JL9J6nuWivZ42hb52wtT8Ss"
+  api_key: "PASTE_YOUR_API_KEY_HERE"
   project_id: 1
 
 registry:
