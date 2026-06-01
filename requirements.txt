@@ -1,4 +1,4 @@
-# Core Machine Learning
+re# Core Machine Learning
 anomalib==2.3.2
 lightning>=2.0.0
 torch>=2.0.0
@@ -25,6 +25,7 @@ minio>=7.2.0
 scikit-learn>=1.2.0
 pandas>=2.0.0
 matplotlib>=3.7.0
+seaborn
 tqdm>=4.65.0
 psutil
 
