@@ -51,6 +51,31 @@ def register_latest_models(experiment_name: str) -> None:
     else:
         logger.warning("No classifier retraining run found to register.")
 
+def run_retraining(config: dict, data_layer) -> dict:
+    ad_enabled = config.get("training", {}).get("anomaly_detector", {}).get("enabled", True)
+    cls_enabled = config.get("training", {}).get("classifier", {}).get("enabled", True)
+
+    ad_success = True
+    cls_success = True
+
+    if ad_enabled:
+        logger.info("--- Retraining Anomaly Detector ---")
+        from weird_hazelnut.training.anomaly import train_anomaly_detector
+        ad_success = train_anomaly_detector(config, data_layer)
+
+    if cls_enabled:
+        logger.info("--- Retraining Classifier ---")
+        from weird_hazelnut.training.classifier import train_classifier
+        cls_success = train_classifier(config, data_layer)
+
+    return {
+        "ad_enabled": ad_enabled,
+        "classifier_enabled": cls_enabled,
+        "ad_success": ad_success,
+        "classifier_success": cls_success,
+        "success": ad_success and cls_success,
+    }
+
 
 def main() -> None:
     config = load_config()
@@ -66,23 +91,9 @@ def main() -> None:
         logger.error("No train/test dataset items found. Run scripts/migrate_dataset_to_datalake.py first.")
         return
 
-    ad_enabled = config.get("training", {}).get("anomaly_detector", {}).get("enabled", True)
-    cls_enabled = config.get("training", {}).get("classifier", {}).get("enabled", True)
-    ad_success = True
-    cls_success = True
+    result = run_retraining(config, data_layer)
 
-    if ad_enabled:
-        logger.info("--- Retraining Anomaly Detector ---")
-        from weird_hazelnut.training.anomaly import train_anomaly_detector
-
-        ad_success = train_anomaly_detector(config, data_layer)
-    if cls_enabled:
-        logger.info("--- Retraining Classifier ---")
-        from weird_hazelnut.training.classifier import train_classifier
-
-        cls_success = train_classifier(config, data_layer)
-
-    if ad_success and cls_success:
+    if result["success"]:
         logger.info("Retraining pipeline completed successfully.")
         if config.get("registry", {}).get("enabled", False):
             register_latest_models(config["mlflow"]["experiment_name"])

@@ -71,10 +71,34 @@ training:
 
 label_studio:
   url: "http://label-studio:8080"
-  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzM1MTEzMiwiaWF0IjoxNzgwMTUxMTMyLCJqdGkiOiI4ZDE4MWMzNGUzNjc0Nzc4ODJiZDU2MjEzZDMxOWI3ZCIsInVzZXJfaWQiOiIxIn0.PIIMuJlEwf6-iJqDv3PwSetH233ss95W3HjhWia55C4"
+  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzQwMDQ5MywiaWF0IjoxNzgwMjAwNDkzLCJqdGkiOiJhYTZlZDhkMTcyNWY0NjU2OTVmMTQ4NGJiMzFlMGRiNSIsInVzZXJfaWQiOiIxIn0.BLIFOSQQPa5U38iCIzUhSAqXXFUEwfX9q1qB5YDpxFI"
   project_id: 1
 
 registry:
   enabled: false # Set to true to use models from MLflow registry
   anomaly_detector: "models:/Hazelnut_Anomaly_Detector/Production"
   classifier: "models:/Hazelnut_Classifier/Production"
+
+data_sync:
+  promote_annotations_to_dataset: true
+  human_feedback_dataset_name: human_feedback_dataset
+  human_feedback_split: train
+
+  human_feedback_split_strategy:
+    enabled: true
+    train_ratio: 0.8
+    val_ratio: 0.2
+    method: hash_by_label_and_image_id
+
+orchestration:
+  schedule_hours: 48
+
+  retrain_gate:
+    min_train_total: 150
+    min_train_defect_total: 10
+    min_val_total: 3
+    min_test_total: 10
+
+  metric_gate:
+    primary_metric: eval_system_accuracy
+    min_improvement: 0.01

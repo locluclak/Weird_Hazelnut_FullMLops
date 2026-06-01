@@ -215,6 +215,218 @@ The initial MVTec-style seed usually has only `train/good`, which is enough for
 anomaly retraining. Classifier retraining requires defect-labeled training items
 such as `crack`, `cut`, `hole`, and `print` in Postgres.
 
+## Automated Retraining Pipeline
+
+The project includes an Apache Airflow orchestration workflow for automated human-in-the-loop retraining.
+
+The DAG is located at:
+
+```text
+dags/uncertainty_retrain_dag.py
+```
+
+Airflow runs the workflow on a configurable schedule (typically every 48 hours in production).
+
+### Workflow
+
+```text
+sync_labels
+    ↓
+check_retrain_gate
+    ↓
+retrain_models
+    ↓
+evaluate_candidate
+    ↓
+promote_if_better
+```
+
+### Step 1: Sync Labels
+
+```bash
+docker exec weird-hazelnut-app python sync_data.py
+```
+
+Completed Label Studio annotations are synchronized into the canonical Postgres/MinIO dataset.
+
+### Step 2: Dataset Validation Gate
+
+```bash
+docker exec weird-hazelnut-app python scripts/check_retrain_gate.py
+```
+
+Retraining only proceeds if minimum dataset requirements are satisfied.
+
+Typical thresholds:
+
+```yaml
+orchestration:
+  retrain_gate:
+    min_train_total: 150
+    min_train_defect_total: 10
+    min_val_total: 3
+    min_test_total: 10
+```
+
+If the dataset does not satisfy the gate, retraining is skipped.
+
+### Step 3: Retrain Models
+
+```bash
+docker exec weird-hazelnut-app python retrain.py
+```
+
+Both models are retrained:
+
+- OpenVINO anomaly detector
+- ONNX defect classifier
+
+Retrained artifacts are written to temporary candidate locations:
+
+```text
+models/anomaly_detector_retrained/
+models/classifier_retrained/
+```
+
+The current production models are not modified during retraining.
+
+### Step 4: Candidate Evaluation
+
+```bash
+docker exec weird-hazelnut-app python scripts/evaluate_candidate.py
+```
+
+The newly retrained candidate models are evaluated against the Postgres/MinIO test split.
+
+Metrics are logged to MLflow under:
+
+```text
+Candidate_Model_Evaluation
+```
+
+The primary metric used for promotion is:
+
+```text
+eval_system_accuracy
+```
+
+### Step 5: Model Promotion
+
+```bash
+docker exec weird-hazelnut-app python scripts/promote_if_better.py
+```
+
+The latest candidate evaluation is compared against the latest production baseline evaluation.
+
+Example:
+
+```text
+baseline eval_system_accuracy = 0.82
+candidate eval_system_accuracy = 0.85
+improvement = 0.03
+```
+
+Promotion occurs only if:
+
+```text
+candidate_metric - baseline_metric >= min_improvement
+```
+
+Example configuration:
+
+```yaml
+orchestration:
+  metric_gate:
+    primary_metric: eval_system_accuracy
+    min_improvement: 0.01
+```
+
+### Promotion Behavior
+
+If the candidate model is accepted:
+
+```text
+models/anomaly_detector_retrained/*
+        ↓
+models/anomaly_detector/*
+
+models/classifier_retrained/*
+        ↓
+models/classifier/*
+```
+
+The candidate model becomes the new production model.
+
+If the candidate model is rejected, the existing production model remains unchanged.
+
+### MLflow Tracking
+
+The workflow creates the following MLflow runs:
+
+```text
+Retraining_AD_MinIO
+Retraining_Classifier_MinIO
+Candidate_Model_Evaluation
+Model_Promotion_Decision
+```
+
+Promotion decisions are recorded as:
+
+```text
+promotion_decision = accepted
+```
+
+or
+
+```text
+promotion_decision = rejected
+```
+
+## Airflow
+
+Open the Airflow UI:
+
+```text
+http://localhost:8088
+```
+
+Default credentials:
+
+```text
+admin
+admin
+```
+
+List available DAGs:
+
+```bash
+docker compose exec airflow-scheduler airflow dags list
+```
+
+Trigger the retraining workflow manually:
+
+```bash
+docker compose exec airflow-scheduler airflow dags trigger uncertainty_retrain_dag
+```
+
+Pause the DAG:
+
+```bash
+docker compose exec airflow-scheduler airflow dags pause uncertainty_retrain_dag
+```
+
+Unpause the DAG:
+
+```bash
+docker compose exec airflow-scheduler airflow dags unpause uncertainty_retrain_dag
+```
+
+View scheduler logs:
+
+```bash
+docker compose logs -f airflow-scheduler
+```
+
 ## Local Development
 
 Create an environment and install dependencies:

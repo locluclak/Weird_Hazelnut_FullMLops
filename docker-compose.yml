@@ -16,6 +16,7 @@ services:
       - ./openvino_cache:/app/openvino_cache
     environment:
       - CONFIG_PATH=config.docker.yaml
+      - PYTHONPATH=/app/src
     depends_on:
       - postgres
       - minio
@@ -46,7 +47,12 @@ services:
     volumes:
       - ./mlflow.db:/app/mlflow.db
       - ./mlruns:/app/mlruns
-    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:////app/mlflow.db --default-artifact-root /app/mlruns
+    command: >
+      mlflow ui
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////app/mlflow.db
+      --default-artifact-root /app/mlruns
     networks:
       - hazelnut-net
     restart: always
@@ -81,6 +87,78 @@ services:
     networks:
       - hazelnut-net
     restart: always
+
+  airflow-init:
+    image: apache/airflow:2.10.5-python3.10
+    container_name: weird-hazelnut-airflow-init
+    user: "0:0"
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create
+      --username admin
+      --password admin
+      --firstname Admin
+      --lastname User
+      --role Admin
+      --email admin@example.com || true
+      "
+    environment:
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./airflow:/opt/airflow
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - hazelnut-net
+
+  airflow-webserver:
+    image: apache/airflow:2.10.5-python3.10
+    container_name: weird-hazelnut-airflow-webserver
+    user: "0:0"
+    command: airflow webserver --port 8088
+    ports:
+      - "8088:8088"
+    environment:
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./airflow:/opt/airflow
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - airflow-init
+    networks:
+      - hazelnut-net
+    restart: unless-stopped
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.5-python3.10
+    container_name: weird-hazelnut-airflow-scheduler
+    user: "0:0"
+    command: airflow scheduler
+    environment:
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./airflow:/opt/airflow
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - airflow-init
+      - airflow-webserver
+    networks:
+      - hazelnut-net
+    restart: unless-stopped
 
 networks:
   hazelnut-net:
