@@ -13,6 +13,8 @@ env/
 mlruns/
 mlflow_data/
 openvino_cache/
+models/anomaly_detector
+models/classifier
 models/anomaly_detector_retrained
 models/classifier_retrained
 
