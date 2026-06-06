@@ -7,6 +7,7 @@ services:
     volumes:
       - ./config.docker.yaml:/app/config.docker.yaml
       - ./src:/app/src
+      - ./web:/app/web
       - ./scripts:/app/scripts
       - ./labeling:/app/labeling
       - ./data:/app/data

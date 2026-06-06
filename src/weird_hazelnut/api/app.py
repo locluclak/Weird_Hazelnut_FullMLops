@@ -1,8 +1,12 @@
 import io
+import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from weird_hazelnut.config import load_config
@@ -54,10 +58,11 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="WeirdHazelnut Combined API", lifespan=lifespan)
     
-    from fastapi.staticfiles import StaticFiles
-    import os
     os.makedirs("data/lake", exist_ok=True)
     app.mount("/static", StaticFiles(directory="data/lake"), name="static")
+    web_dir = Path(__file__).resolve().parents[3] / "web"
+    if web_dir.exists():
+        app.mount("/ui", StaticFiles(directory=web_dir), name="ui")
 
     from fastapi.middleware.cors import CORSMiddleware
     app.add_middleware(
@@ -75,6 +80,13 @@ def create_app() -> FastAPI:
             "pipeline_loaded": state.pipeline is not None,
             "mlflow_active": state.tracker is not None and state.tracker.run is not None,
         }
+
+    @app.get("/", include_in_schema=False)
+    async def index():
+        index_path = web_dir / "index.html"
+        if not index_path.exists():
+            raise HTTPException(status_code=404, detail="UI not found")
+        return FileResponse(index_path)
 
     @app.post("/predict")
     async def predict(file: UploadFile = File(...)):
