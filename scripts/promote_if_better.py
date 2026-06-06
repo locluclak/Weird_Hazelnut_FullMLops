@@ -77,13 +77,22 @@ def promote_candidate_artifacts(config: dict) -> dict:
 
     candidate_cls_onnx = cls_output_dir / cls_training_cfg.get("onnx_name", "model.onnx")
     candidate_cls_meta = cls_output_dir / cls_training_cfg.get("meta_name", "meta.json")
+    candidate_cls_data = candidate_cls_onnx.with_name(candidate_cls_onnx.name + ".data")
+
+    cls_prod_data = cls_prod_onnx.with_name(cls_prod_onnx.name + ".data")
 
     copy_file(candidate_ad_xml, ad_prod_xml)
     copy_file(candidate_ad_bin, ad_prod_bin)
     copy_file(candidate_cls_onnx, cls_prod_onnx)
     copy_file(candidate_cls_meta, cls_prod_meta)
 
-    return {
+    extra_copied = {}
+    if candidate_cls_data.exists():
+        copy_file(candidate_cls_data, cls_prod_data)
+        extra_copied["promoted_cls_data"] = str(cls_prod_data)
+        extra_copied["candidate_cls_data"] = str(candidate_cls_data)
+
+    ret = {
         "promoted_ad_xml": str(ad_prod_xml),
         "promoted_ad_bin": str(ad_prod_bin),
         "promoted_cls_onnx": str(cls_prod_onnx),
@@ -93,6 +102,8 @@ def promote_candidate_artifacts(config: dict) -> dict:
         "candidate_cls_onnx": str(candidate_cls_onnx),
         "candidate_cls_meta": str(candidate_cls_meta),
     }
+    ret.update(extra_copied)
+    return ret
 
 
 def main() -> None:

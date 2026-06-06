@@ -30,7 +30,7 @@ server:
   port: 8000
 
 mlflow:
-  tracking_uri: "sqlite:////app/mlflow.db"
+  tracking_uri: "sqlite:////app/mlflow_data/mlflow.db"
   artifact_root: "file:///app/mlruns"
   experiment_name: "WeirdHazelnut_Integrated_Pipeline"
   run_name: "Production_Inference_Session"
@@ -59,19 +59,22 @@ training:
     onnx_name: "model.onnx"
     meta_name: "meta.json"
     img_size: 224
-    epochs: 5
+    epochs: 50
     batch_size: 32
     lr: 0.001
     weight_decay: 0.0001
     label_smooth: 0.1
-    early_stop: 5
+    early_stop: 10
     augment_level: "medium"
     include_good: false
-    pretrained: false
+    pretrained: true
+    dataset_dir: "data/classifier_dataset"
+    split_ratio: 0.8
+    train_priority_threshold: 10
 
 label_studio:
   url: "http://label-studio:8080"
-  api_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4NzQwMDQ5MywiaWF0IjoxNzgwMjAwNDkzLCJqdGkiOiJhYTZlZDhkMTcyNWY0NjU2OTVmMTQ4NGJiMzFlMGRiNSIsInVzZXJfaWQiOiIxIn0.BLIFOSQQPa5U38iCIzUhSAqXXFUEwfX9q1qB5YDpxFI"
+  api_key: "PASTE_YOUR_API_KEY_HERE"
   project_id: 1
 
 registry:
@@ -94,10 +97,10 @@ orchestration:
   schedule_hours: 48
 
   retrain_gate:
-    min_train_total: 150
-    min_train_defect_total: 10
-    min_val_total: 3
-    min_test_total: 10
+    min_train_total: 1
+    min_train_defect_total: 0
+    min_val_total: 0
+    min_test_total: 0
 
   metric_gate:
     primary_metric: eval_system_accuracy

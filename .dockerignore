@@ -18,10 +18,12 @@ labeling/label_studio_docker/mydata/
 label_studio_docker/mydata/
 label_studio_docker/myfiles/
 
-data/
-models/
+/data/
+models/anomaly_detector_retrained
+models/classifier_retrained
 results/
 mlruns/
+mlflow_data/
 mlflow.db
 openvino_cache/
 airflow/
