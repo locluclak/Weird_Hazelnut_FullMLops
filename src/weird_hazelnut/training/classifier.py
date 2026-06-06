@@ -139,7 +139,7 @@ def export_onnx(model, img_size: int, output_path: Path) -> None:
         input_names=["image"],
         output_names=["logits"],
         dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}},
-        opset_version=17,
+        opset_version=18,
     )
 
 
@@ -515,6 +515,9 @@ def train_classifier(config: dict, data_layer: DataLayer) -> bool:
         meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
         mlflow.log_metric("eval_best_val_acc", float(best_acc))
         mlflow.log_artifact(str(onnx_path), "production_models")
+        onnx_data_path = onnx_path.with_name(onnx_path.name + ".data")
+        if onnx_data_path.exists():
+            mlflow.log_artifact(str(onnx_data_path), "production_models")
         mlflow.log_artifact(str(meta_path), "production_models")
         if cm_path.exists():
             mlflow.log_artifact(str(cm_path), "production_models")

@@ -1,4 +1,4 @@
-re# Core Machine Learning
+# Core Machine Learning
 anomalib==2.3.2
 lightning>=2.0.0
 torch>=2.0.0
@@ -6,7 +6,7 @@ torchvision>=0.15.0
 onnx>=1.14.0
 onnxruntime>=1.15.0
 openvino>=2023.0.0
-kornia
+kornia==0.6.12
 
 # API & Server
 fastapi>=0.100.0

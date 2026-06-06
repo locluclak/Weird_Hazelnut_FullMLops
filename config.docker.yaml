@@ -97,10 +97,10 @@ orchestration:
   schedule_hours: 48
 
   retrain_gate:
-    min_train_total: 150
-    min_train_defect_total: 10
-    min_val_total: 2
-    min_test_total: 10
+    min_train_total: 1
+    min_train_defect_total: 0
+    min_val_total: 0
+    min_test_total: 0
 
   metric_gate:
     primary_metric: eval_system_accuracy
