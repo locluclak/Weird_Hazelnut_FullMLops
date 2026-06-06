@@ -9,7 +9,7 @@ env/
 .venv/
 
 /data/
-models/
+/models/
 mlruns/
 mlflow.db
 openvino_cache/
