@@ -22,10 +22,7 @@ temp_ad_config.yaml
 *.log
 
 # Airflow runtime
-airflow/logs/
-airflow/*.pid
-airflow/airflow.cfg
-airflow/webserver_config.py
+airflow/
 
 # Experiment outputs
 results/
