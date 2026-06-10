@@ -7,20 +7,27 @@ services:
     volumes:
       - ./config.docker.yaml:/app/config.docker.yaml
       - ./src:/app/src
+      - ./web:/app/web
       - ./scripts:/app/scripts
       - ./labeling:/app/labeling
       - ./data:/app/data
       - ./models:/app/models
-      - ./mlflow.db:/app/mlflow.db
+      - ./mlflow_data:/app/mlflow_data
       - ./mlruns:/app/mlruns
       - ./openvino_cache:/app/openvino_cache
     environment:
       - CONFIG_PATH=config.docker.yaml
       - PYTHONPATH=/app/src
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
     depends_on:
-      - postgres
-      - minio
-      - label-studio
+      postgres:
+        condition: service_started
+      minio:
+        condition: service_started
+      label-studio:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
     networks:
       - hazelnut-net
     restart: always
@@ -32,12 +39,20 @@ services:
       - "8080:8080"
     volumes:
       - label_studio_data:/label-studio/data
+      - ./data:/label-studio/files
     environment:
       - LABEL_STUDIO_USERNAME=admin@example.com
       - LABEL_STUDIO_PASSWORD=admin123456
+      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/files
     networks:
       - hazelnut-net
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mlflow:
     build: .
@@ -45,13 +60,13 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./mlflow.db:/app/mlflow.db
+      - ./mlflow_data:/app/mlflow_data
       - ./mlruns:/app/mlruns
     command: >
       mlflow ui
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri sqlite:////app/mlflow.db
+      --backend-store-uri sqlite:////app/mlflow_data/mlflow.db
       --default-artifact-root /app/mlruns
     networks:
       - hazelnut-net
@@ -133,7 +148,8 @@ services:
       - ./airflow:/opt/airflow
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - airflow-init
+      airflow-init:
+        condition: service_completed_successfully
     networks:
       - hazelnut-net
     restart: unless-stopped
@@ -154,8 +170,10 @@ services:
       - ./airflow:/opt/airflow
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - airflow-init
-      - airflow-webserver
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-webserver:
+        condition: service_started
     networks:
       - hazelnut-net
     restart: unless-stopped
@@ -168,3 +186,4 @@ volumes:
   label_studio_data:
   postgres_data:
   minio_data:
+  

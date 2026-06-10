@@ -70,7 +70,7 @@ def local_file_url(image_path: str) -> str:
     normalized = image_path.replace("\\", "/")
     parts = normalized.split("/data/lake/")
     if len(parts) > 1:
-        relative_path = "lake/" + parts[1]
+        relative_path = parts[1]
     else:
         relative_path = os.path.basename(image_path)
-    return f"/data/local-files/?d={relative_path}"
+    return f"http://localhost:8000/static/{relative_path}"

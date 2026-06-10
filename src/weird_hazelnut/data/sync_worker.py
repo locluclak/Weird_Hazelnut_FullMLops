@@ -68,8 +68,6 @@ class DataSyncWorker:
                 if not task.annotations:
                     continue
 
-                # label = self._extract_label(task.annotations[0].result)
-
                 annotation = task.annotations[0]
                 annotation_result = (
                     annotation.get("result")
@@ -107,6 +105,9 @@ class DataSyncWorker:
             logger.error("Error during sync: %s", e)
 
     def _resolve_local_path(self, image_source_path: str) -> str:
+        if "/static/" in image_source_path:
+            rel_to_files = image_source_path.split("/static/")[1]
+            return os.path.abspath(os.path.join("data/lake", rel_to_files))
         if "ls-local-files://" in image_source_path:
             rel_to_files = image_source_path.replace("ls-local-files://", "")
             if rel_to_files.startswith("lake/"):
@@ -122,6 +123,9 @@ class DataSyncWorker:
         return image_source_path
 
     def _extract_label(self, result):
+        if not result or not isinstance(result, list):
+            return None
+        
         primary_choice = None
         secondary_choice = None
 
@@ -142,13 +146,6 @@ class DataSyncWorker:
     def _sync_annotation_to_database(self, task, label: str) -> bool:
         target_class = self.class_map.get(label, label.lower())
 
-        # ===== OLD VERSION ===== 
-
-        # annotation = task.annotations[0]
-        # annotation_id = getattr(annotation, "id", None)
-        # annotator_id = getattr(annotation, "completed_by", None)
-        # raw_annotation = self._to_plain_dict(annotation)
-
         annotation = task.annotations[0]
         if isinstance(annotation, dict):
             annotation_id = annotation.get("id")
@@ -158,7 +155,6 @@ class DataSyncWorker:
             annotation_id = getattr(annotation, "id", None)
             annotator_id = getattr(annotation, "completed_by", None)
             raw_annotation = self._to_plain_dict(annotation)
-
 
         image_id = task.data.get("image_id") if getattr(task, "data", None) else None
 

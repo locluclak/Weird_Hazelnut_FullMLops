@@ -6,7 +6,7 @@ torchvision>=0.15.0
 onnx>=1.14.0
 onnxruntime>=1.15.0
 openvino>=2023.0.0
-kornia
+kornia==0.6.12
 
 # API & Server
 fastapi>=0.100.0
@@ -25,6 +25,7 @@ minio>=7.2.0
 scikit-learn>=1.2.0
 pandas>=2.0.0
 matplotlib>=3.7.0
+seaborn
 tqdm>=4.65.0
 psutil
 

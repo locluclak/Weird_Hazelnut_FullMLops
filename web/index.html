@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WeirdHazelnut Inspection</title>
+    <link rel="stylesheet" href="/ui/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-label="Hazelnut image inspection">
+        <div class="panel upload-panel">
+          <div class="brand-row">
+            <div>
+              <p class="eyebrow">WeirdHazelnut</p>
+              <h1>Hazelnut inspection</h1>
+            </div>
+            <span id="apiStatus" class="status-pill">Checking API</span>
+          </div>
+
+          <form id="predictForm" class="dropzone">
+            <input id="fileInput" type="file" name="file" accept="image/*">
+            <label for="fileInput" id="dropLabel">
+              <span class="upload-icon" aria-hidden="true">+</span>
+              <span class="drop-title">Upload an image</span>
+              <span class="drop-hint">PNG, JPG, or WEBP hazelnut sample</span>
+            </label>
+          </form>
+
+          <div class="preview-wrap">
+            <img id="previewImage" alt="Selected hazelnut preview">
+            <div id="emptyPreview" class="empty-preview">No image selected</div>
+          </div>
+
+          <div class="actions">
+            <button id="predictButton" type="button" disabled>Run prediction</button>
+            <button id="clearButton" type="button" class="secondary" disabled>Clear</button>
+          </div>
+          <p id="message" class="message" role="status"></p>
+        </div>
+
+        <div class="panel result-panel">
+          <div class="result-header">
+            <div>
+              <p class="eyebrow">Prediction</p>
+              <h2 id="resultTitle">Waiting for image</h2>
+            </div>
+            <span id="decisionBadge" class="decision-badge neutral">Idle</span>
+          </div>
+
+          <div class="score-grid">
+            <div class="metric">
+              <span>Anomaly score</span>
+              <strong id="anomalyScore">--</strong>
+            </div>
+            <div class="metric">
+              <span>Confidence</span>
+              <strong id="confidence">--</strong>
+            </div>
+            <div class="metric">
+              <span>Total latency</span>
+              <strong id="totalLatency">--</strong>
+            </div>
+          </div>
+
+          <dl class="details">
+            <div><dt>Label</dt><dd id="labelValue">--</dd></div>
+            <div><dt>Uncertain</dt><dd id="uncertainValue">--</dd></div>
+            <div><dt>Classifier called</dt><dd id="classifierCalled">--</dd></div>
+            <div><dt>AD latency</dt><dd id="adLatency">--</dd></div>
+            <div><dt>Classifier latency</dt><dd id="classifierLatency">--</dd></div>
+            <div><dt>Label Studio task</dt><dd id="lsTask">--</dd></div>
+          </dl>
+
+          <details class="raw-json">
+            <summary>Raw response</summary>
+            <pre id="rawResponse">{}</pre>
+          </details>
+        </div>
+      </section>
+    </main>
+    <script src="/ui/app.js"></script>
+  </body>
+</html>

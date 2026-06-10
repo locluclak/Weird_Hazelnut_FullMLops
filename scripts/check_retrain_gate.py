@@ -15,13 +15,61 @@ def main():
         print("DATA_GATE_FAILED: data_layer.enabled must be true")
         sys.exit(1)
 
+    # 1. Query MLflow for the last training run time
+    last_retrained_at = None
+    try:
+        import mlflow
+        from mlflow.tracking import MlflowClient
+        from datetime import datetime
+
+        mlflow_cfg = config.get("mlflow", {})
+        mlflow.set_tracking_uri(mlflow_cfg.get("tracking_uri", "sqlite:///mlflow.db"))
+        
+        client = MlflowClient()
+        experiment = client.get_experiment_by_name(
+            mlflow_cfg.get("experiment_name", "WeirdHazelnut_Integrated_Pipeline")
+        )
+        if experiment:
+            runs = client.search_runs(
+                experiment_ids=[experiment.experiment_id],
+                order_by=["attribute.start_time DESC"],
+                max_results=50,
+            )
+            for run in runs:
+                run_name = run.data.tags.get("mlflow.runName", "")
+                if "Retraining_AD" in run_name or "Retraining_Classifier" in run_name:
+                    # MLflow start_time is in milliseconds since epoch
+                    last_retrained_at = datetime.utcfromtimestamp(run.info.start_time / 1000.0)
+                    print(f"Found latest retraining run started at: {last_retrained_at} UTC")
+                    break
+    except Exception as e:
+        print(f"Warning: Failed to fetch training history from MLflow: {e}. Falling back to counting all samples.")
+
     counts = {}
+
+    from sqlalchemy import select
+    from weird_hazelnut.data.models import DatasetItem, Annotation
 
     for split in ["train", "val", "test"]:
         for label in LABELS:
-            counts[f"{split}/{label}"] = len(
-                data_layer.list_dataset_images(split=split, labels=[label])
-            )
+            if last_retrained_at:
+                # Count only new samples synced from label_studio since the last retraining
+                with data_layer.database.session() as session:
+                    stmt = (
+                        select(DatasetItem)
+                        .join(Annotation, Annotation.id == DatasetItem.annotation_id)
+                        .where(Annotation.source == "label_studio")
+                        .where(Annotation.created_at > last_retrained_at)
+                        .where(DatasetItem.split == split)
+                        .where(DatasetItem.label == label)
+                    )
+                    items = session.scalars(stmt).all()
+                    counts[f"{split}/{label}"] = len(items)
+            else:
+                # Count all samples (seed + synced) if no prior retraining was found
+                counts[f"{split}/{label}"] = len(
+                    data_layer.list_dataset_images(split=split, labels=[label])
+                )
 
     counts["train/total"] = sum(counts[f"train/{label}"] for label in LABELS)
     counts["train/defect_total"] = sum(
