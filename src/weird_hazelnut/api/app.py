@@ -11,9 +11,8 @@ from PIL import Image
 
 from weird_hazelnut.config import load_config
 from weird_hazelnut.data import create_data_layer
-from weird_hazelnut.integrations import LabelStudioClient
-from weird_hazelnut.integrations.mlflow_tracking import MlflowTracker
-from weird_hazelnut.integrations.mlflow_tracking import resolve_model_paths
+from weird_hazelnut.integrations import LabelStudioClient, setup_loki_logging
+from weird_hazelnut.integrations.mlflow_tracking import MlflowTracker, resolve_model_paths
 from weird_hazelnut.pipeline import HazelnutPipeline
 
 
@@ -31,6 +30,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        setup_loki_logging(config)
         try:
             ad_model_path, cls_model_path, cls_meta_path = resolve_model_paths(config)
             ls_client = _create_label_studio_client(config)

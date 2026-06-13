@@ -35,3 +35,8 @@ artifacts/
 
 # Embedded repo
 related_repo/
+
+# Azure VM Deploy Keys & Artifacts
+*.pem
+deployment.zip
+scratch/

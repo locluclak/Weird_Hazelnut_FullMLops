@@ -25,7 +25,7 @@ class LightweightBehaviorTests(unittest.TestCase):
 
         self.assertEqual(
             local_file_url(image_path),
-            "/data/local-files/?d=lake/uncertain/sample.png",
+            "http://localhost:8000/static/uncertain/sample.png",
         )
 
     def test_extract_label_returns_anomaly_subclass_when_present(self):

@@ -36,4 +36,30 @@ def load_config(config_path: str | os.PathLike[str] | None = None) -> dict[str, 
         except ValueError:
             pass
 
+    # Override MinIO public endpoint with environment variables if present
+    env_minio_public_endpoint = os.getenv("MINIO_PUBLIC_ENDPOINT")
+    if env_minio_public_endpoint:
+        if "data_layer" in cfg and "object_storage" in cfg["data_layer"]:
+            cfg["data_layer"]["object_storage"]["public_endpoint"] = env_minio_public_endpoint
+
+    # Override Loki Cloud Logging with environment variables
+    if "cloud_logging" not in cfg:
+        cfg["cloud_logging"] = {}
+
+    env_loki_enabled = os.getenv("LOKI_ENABLED")
+    if env_loki_enabled is not None:
+        cfg["cloud_logging"]["enabled"] = env_loki_enabled.lower() in ("true", "1", "yes")
+
+    env_loki_url = os.getenv("LOKI_URL")
+    if env_loki_url:
+        cfg["cloud_logging"]["loki_url"] = env_loki_url
+
+    env_loki_user = os.getenv("LOKI_USER")
+    if env_loki_user:
+        cfg["cloud_logging"]["loki_user"] = env_loki_user
+
+    env_loki_password = os.getenv("LOKI_PASSWORD")
+    if env_loki_password:
+        cfg["cloud_logging"]["loki_password"] = env_loki_password
+
     return cfg

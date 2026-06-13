@@ -27,3 +27,8 @@ mlflow_data/
 mlflow.db
 openvino_cache/
 airflow/
+
+# Deployment keys and artifacts
+*.pem
+deployment.zip
+scratch/

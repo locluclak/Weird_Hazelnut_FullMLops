@@ -92,3 +92,12 @@ data_sync:
     train_ratio: 0.8
     val_ratio: 0.2
     method: hash_by_label_and_image_id
+
+cloud_logging:
+  enabled: false
+  loki_url: "https://logs-prod-020.grafana.net"
+  loki_user: "1647033"
+  loki_password: "YOUR_GRAFANA_LOKI_TOKEN"
+  labels:
+    app: "weird-hazelnut"
+    env: "development"

@@ -105,3 +105,12 @@ orchestration:
   metric_gate:
     primary_metric: eval_system_accuracy
     min_improvement: 0.01
+
+cloud_logging:
+  enabled: false
+  loki_url: "https://logs-prod-020.grafana.net"
+  loki_user: "1647033"
+  loki_password: "YOUR_GRAFANA_LOKI_TOKEN"
+  labels:
+    app: "weird-hazelnut"
+    env: "production"
